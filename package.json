@@ -1,0 +1,26 @@
+{
+  "name": "payment-widget-smart-contract",
+  "version": "1.0.0",
+  "description": "",
+  "main": "truffle.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yaronvel/payment-widget-smart-contract.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/yaronvel/payment-widget-smart-contract/issues"
+  },
+  "homepage": "https://github.com/yaronvel/payment-widget-smart-contract#readme",
+  "dependencies": {
+    "bignumber.js": "^8.0.1",
+    "solc": "^0.4.22",
+    "solhint": "^1.4.0",
+    "truffle": "^4.1.14",
+    "web3": "^1.0.0-beta.36"
+  }
+}
