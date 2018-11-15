@@ -54,11 +54,11 @@ contract KyberPayWrapper is Withdrawable, ReentrancyGuard {
     ) public payable
     {
 
-        require(payData.src != address(0));
-        require(payData.dest != address(0));
-        require(payData.destAddress != address(0));
+        require(src != address(0));
+        require(dest != address(0));
+        require(destAddress != address(0));
 
-        if (payData.src == ETH_TOKEN_ADDRESS) require(payData.srcAmount == msg.value);
+        if (src == ETH_TOKEN_ADDRESS) require(srcAmount == msg.value);
 
         PayData memory payData = PayData(
             src,
@@ -73,10 +73,10 @@ contract KyberPayWrapper is Withdrawable, ReentrancyGuard {
             kyberNetworkProxy
         );
 
-        uint paidAmount = (payData.src == payData.dest) ? doPayWithoutKyber(payData) : doPayWithKyber(payData);
+        uint paidAmount = (src == dest) ? doPayWithoutKyber(payData) : doPayWithKyber(payData);
 
         // log as event
-        emit ProofOfPayment(msg.sender, dest, paidAmount, paymentData);
+        emit ProofOfPayment(destAddress, dest, paidAmount, paymentData);
     }
 
     function doPayWithoutKyber(PayData memory payData) internal returns (uint paidAmount) {

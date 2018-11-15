@@ -18,6 +18,10 @@
   "homepage": "https://github.com/yaronvel/payment-widget-smart-contract#readme",
   "dependencies": {
     "bignumber.js": "^8.0.1",
+    "chai": "^4.2.0",
+    "chai-as-promised": "^7.1.1",
+    "chai-bignumber": "^2.0.2",
+    "mathjs": "^5.2.3",
     "solc": "^0.4.22",
     "solhint": "^1.4.0",
     "truffle": "^4.1.14",
