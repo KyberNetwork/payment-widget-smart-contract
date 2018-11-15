@@ -13,6 +13,7 @@ const ethAddress = '0x00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
 const ethAddressJS = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
 const paymentData = "ThisIsPaymentData"
 const paymentDataHex = "0x".concat(new Buffer(paymentData).toString('hex'));
+const rate = 0.25
 
 const KyberPayWrapper = artifacts.require("./KyberPayWrapper.sol")
 const TestToken = artifacts.require("./mock/TestToken.sol");
@@ -46,6 +47,10 @@ contract('KyberPayWrapper', function(accounts) {
         token1 = await TestToken.new("token1", "tok1", 18);
         token2 = await TestToken.new("token2", "tok2", 18);
         kyberNetwork = await MockKyberNetwork.new();
+
+        // move some tokens and ether to kyber network
+        const kyberNetworkTok1InitAmount = precision.times(100)
+        await token1.transfer(kyberNetwork.address, kyberNetworkTok1InitAmount)
 
         senderEthBefore = await Helper.getBalancePromise(admin);
         senderTok1Before = await token1.balanceOf(admin);
@@ -191,22 +196,64 @@ contract('KyberPayWrapper', function(accounts) {
         const amount = precision.mul(1.8);
 
         it("max dest amount is exactly as expected dest amount", async function () {
-            const maxDestAmount = amount; // 1>4
+            const maxDestAmount = amount.times(1/rate);
             txInfo = await payWrapper.pay(ethAddress, amount, token1.address, reciever, maxDestAmount, 0, 0, paymentData,
-                                 0, kyberNetwork.address, {value: amount})
+                                          0, kyberNetwork.address, {value: amount})
+
             expectedSenderLoss = amount.plus(await getGasCost(txInfo));
+            expectedRecierverGain = amount.times(1/rate);
 
             senderEthAfter = await Helper.getBalancePromise(admin);
             recieverTokensAfter = await token1.balanceOf(reciever);
 
             assert.equal(senderEthAfter.toString(), senderEthBefore.minus(expectedSenderLoss).toString())
-            assert.equal(recieverTokensAfter.toString(), recieverTok1Before.plus(amount).toString())
+            assert.equal(recieverTokensAfter.toString(), recieverTok1Before.plus(expectedRecierverGain).toString())
         });
 
-        xit("event is emitted correctly", async function () {});
-        xit("max dest amount is smaller than expected dest amount", async function () {});
-        xit("max dest amount is larger than as expected dest amount", async function () {});
-        xit("without sending enough eth", async function () {});
+        it("event is emitted correctly", async function () {
+            const maxDestAmount = amount.times(1/rate);
+            const { logs } = await payWrapper.pay(ethAddress, amount, token1.address, reciever, maxDestAmount, 0, 0, paymentData,
+                                                  0, kyberNetwork.address, {value: amount})
+
+            assert.equal(logs.length, 1);
+            assert.equal(logs[0].event, 'ProofOfPayment');
+            assert.equal(logs[0].args._beneficiary, reciever);
+            assert.equal(logs[0].args._token, token1.address);
+            assert.equal(logs[0].args._amount, maxDestAmount.toString());
+            assert.equal(logs[0].args._data, paymentDataHex);
+        });
+
+        it("max dest amount is smaller than expected dest amount", async function () {
+            const maxDestAmount = amount.times(1/rate).times(0.7);
+            txInfo = await payWrapper.pay(ethAddress, amount, token1.address, reciever, maxDestAmount, 0, 0, paymentData,
+                                 0, kyberNetwork.address, {value: amount})
+
+            const expectedActualSrcAmount = amount.times(0.7);
+            expectedSenderLoss = expectedActualSrcAmount.plus(await getGasCost(txInfo));
+            expectedRecierverGain = maxDestAmount;
+
+            senderEthAfter = await Helper.getBalancePromise(admin);
+            recieverTokensAfter = await token1.balanceOf(reciever);
+
+            assert.equal(senderEthAfter.toString(), senderEthBefore.minus(expectedSenderLoss).toString())
+            assert.equal(recieverTokensAfter.toString(), recieverTok1Before.plus(expectedRecierverGain).toString())
+        });
+
+        it("max dest amount is larger than as expected dest amount", async function () {
+            const maxDestAmount = amount.times(1/rate).times(1.4);
+            txInfo = await payWrapper.pay(ethAddress, amount, token1.address, reciever, maxDestAmount, 0, 0, paymentData,
+                    0, kyberNetwork.address, {value: amount})
+
+            const expectedActualSrcAmount = amount;
+            expectedSenderLoss = expectedActualSrcAmount.plus(await getGasCost(txInfo));
+            expectedRecierverGain = amount.times(1/rate);
+            
+            senderEthAfter = await Helper.getBalancePromise(admin);
+            recieverTokensAfter = await token1.balanceOf(reciever);
+            
+            assert.equal(senderEthAfter.toString(), senderEthBefore.minus(expectedSenderLoss).toString())
+            assert.equal(recieverTokensAfter.toString(), recieverTok1Before.plus(expectedRecierverGain).toString())
+        });
     });
 
     describe('token to eth', function () {
@@ -220,6 +267,8 @@ contract('KyberPayWrapper', function(accounts) {
         xit("without sending enough eth", async function () {});
         xit("verify allowance of pay wrapper is 0 after the payment", async function () {});
     });
+
+    describe('token to another token', function () {});
 
     describe('check withdrawable', function () {
         const from = other;

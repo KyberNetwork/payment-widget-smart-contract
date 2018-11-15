@@ -12,7 +12,7 @@ interface ERC20 {
 }
 
 contract MockKyberNetwork {
-    uint constant public RATE = (10 ** 18) / 1; // 1 -> 4
+    uint constant public RATE = (10 ** 18) / 4;
     uint constant public PRECISION = (10 ** 18);
     ERC20 constant public ETH_TOKEN_ADDRESS = ERC20(0x00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee);
 
@@ -30,21 +30,42 @@ contract MockKyberNetwork {
     returns(uint) {
 
 		uint destAmount;
+		uint returnAmount;
+		
+		if (src == ETH_TOKEN_ADDRESS) require(msg.value == srcAmount);
 
-		if (src == ETH_TOKEN_ADDRESS) {
-		    require(dest != ETH_TOKEN_ADDRESS);
-		    require(msg.value == srcAmount);
+		destAmount = srcAmount * PRECISION / RATE;
+		(destAmount, returnAmount) = forceMaxDestAmount(destAmount, maxDestAmount, srcAmount);
 
-			destAmount = srcAmount * PRECISION / RATE;
-			dest.transfer( destAddress, destAmount);
-	
+		if(dest == ETH_TOKEN_ADDRESS) {
+			destAddress.transfer(destAmount);
 		} else {
-		    require(dest == ETH_TOKEN_ADDRESS);
-
-		    destAmount = srcAmount * RATE / PRECISION;
-		    destAddress.transfer(destAmount);
+		    require(dest.transfer(destAddress, destAmount));
 		}
 		
+		if (returnAmount > 0) {
+		    if (src == ETH_TOKEN_ADDRESS) {
+		        msg.sender.transfer(returnAmount);
+		    } else {
+		        src.transfer(msg.sender, returnAmount);
+		    }
+		}
+
 		return destAmount;
+
+		//destAmount = srcAmount * RATE / PRECISION;
+	}
+
+	function forceMaxDestAmount(uint prevDestAmount, uint maxDestAmount, uint srcAmount)
+	internal
+	returns (uint destAmount, uint returnAmount) {
+		destAmount = prevDestAmount;
+		returnAmount = 0;
+
+    	if(maxDestAmount < destAmount) {
+		    destAmount = maxDestAmount;
+		    uint usedSrcAmount = srcAmount * maxDestAmount / prevDestAmount;
+		    returnAmount = srcAmount - usedSrcAmount;
+		}
 	}
 }

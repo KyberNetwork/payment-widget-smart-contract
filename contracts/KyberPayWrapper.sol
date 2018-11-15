@@ -38,6 +38,8 @@ contract KyberPayWrapper is Withdrawable, ReentrancyGuard {
         KyberNetwork kyberNetworkProxy;
     }
 
+    function () public payable {}
+
     event ProofOfPayment(address _beneficiary, address _token, uint _amount, bytes _data);
 
     function pay(
@@ -104,12 +106,11 @@ contract KyberPayWrapper is Withdrawable, ReentrancyGuard {
     function doPayWithKyber(PayData memory payData) internal returns (uint paidAmount) {
 
         uint returnAmount;
-        uint wrapperDestBalanceBefore;
+        uint wrapperSrcBalanceBefore;
         uint destAddressBalanceBefore;
-        uint wrapperDestBalanceAfter;
+        uint wrapperSrcBalanceAfter;
         uint destAddressBalanceAfter;
-
-        (wrapperDestBalanceBefore, destAddressBalanceBefore) = getBalances(payData.dest, payData.destAddress);
+        uint srcAmountUsed;
 
         if (payData.src != ETH_TOKEN_ADDRESS) {
             require(payData.src.transferFrom(msg.sender, address(this), payData.srcAmount));
@@ -117,23 +118,29 @@ contract KyberPayWrapper is Withdrawable, ReentrancyGuard {
             require(payData.src.approve(payData.kyberNetworkProxy, payData.srcAmount));
         }
 
+        (wrapperSrcBalanceBefore, destAddressBalanceBefore) = getBalances(payData.src, payData.dest, payData.destAddress);
+
         paidAmount = doTradeWithHint(payData);
-        require(payData.src.approve(payData.kyberNetworkProxy, 0));
-        (wrapperDestBalanceAfter, destAddressBalanceAfter) = getBalances(payData.dest, payData.destAddress);
+        if (payData.src != ETH_TOKEN_ADDRESS) require(payData.src.approve(payData.kyberNetworkProxy, 0));
+
+        (wrapperSrcBalanceAfter, destAddressBalanceAfter) = getBalances(payData.src, payData.dest, payData.destAddress);
 
         // verify the amount the user got is same as returned from Kyber Network
         require(destAddressBalanceAfter > destAddressBalanceBefore);
         require(paidAmount == (destAddressBalanceAfter - destAddressBalanceBefore));
 
         // calculate the returned change amount
-        require(wrapperDestBalanceAfter >= wrapperDestBalanceBefore);
-        returnAmount = wrapperDestBalanceAfter - wrapperDestBalanceBefore;
+        require(wrapperSrcBalanceBefore >= wrapperSrcBalanceAfter);
+        srcAmountUsed = wrapperSrcBalanceBefore - wrapperSrcBalanceAfter;
+
+        require(payData.srcAmount >= srcAmountUsed);
+        returnAmount = payData.srcAmount - srcAmountUsed;
 
         // return to sender the returned change
         if (returnAmount > 0) {
-            if (payData.dest == ETH_TOKEN_ADDRESS) msg.sender.transfer(returnAmount);
+            if (payData.src == ETH_TOKEN_ADDRESS) msg.sender.transfer(returnAmount);
             else {
-                require(payData.dest.transfer(msg.sender, returnAmount));
+                require(payData.src.transfer(msg.sender, returnAmount));
             }
         }
     }
@@ -151,17 +158,15 @@ contract KyberPayWrapper is Withdrawable, ReentrancyGuard {
         );
     }
 
-    function getBalances (ERC20 dest, address destAddress)
+    function getBalances (ERC20 src, ERC20 dest, address destAddress)
         internal
         view
-        returns (uint wrapperDestBalance, uint destAddressBalance)
+        returns (uint wrapperSrcBalance, uint destAddressBalance)
     {
-        if (dest == ETH_TOKEN_ADDRESS) {
-            wrapperDestBalance = address(this).balance;
-            destAddressBalance = destAddress.balance;
-        } else {
-            wrapperDestBalance = dest.balanceOf(address(this));
-            destAddressBalance = dest.balanceOf(destAddress);
-        }
+        if (src == ETH_TOKEN_ADDRESS) wrapperSrcBalance = address(this).balance;
+        else wrapperSrcBalance = src.balanceOf(address(this));
+
+        if (dest == ETH_TOKEN_ADDRESS) destAddressBalance = destAddress.balance;
+        else destAddressBalance = dest.balanceOf(destAddress);
     } 
 }
