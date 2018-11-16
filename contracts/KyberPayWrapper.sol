@@ -118,6 +118,7 @@ contract KyberPayWrapper is Withdrawable, ReentrancyGuard {
             require(payData.src.approve(payData.kyberNetworkProxy, payData.srcAmount));
         }
 
+
         (wrapperSrcBalanceBefore, destAddressBalanceBefore) = getBalances(payData.src, payData.dest, payData.destAddress);
 
         paidAmount = doTradeWithHint(payData);

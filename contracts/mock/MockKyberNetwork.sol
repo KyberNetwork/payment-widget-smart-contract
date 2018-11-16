@@ -16,6 +16,8 @@ contract MockKyberNetwork {
     uint constant public PRECISION = (10 ** 18);
     ERC20 constant public ETH_TOKEN_ADDRESS = ERC20(0x00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee);
 
+    function () public payable {}
+
     function tradeWithHint(
         ERC20 src,
         uint srcAmount,
@@ -29,43 +31,46 @@ contract MockKyberNetwork {
     payable
     returns(uint) {
 
-		uint destAmount;
-		uint returnAmount;
-		
-		if (src == ETH_TOKEN_ADDRESS) require(msg.value == srcAmount);
+        uint destAmount;
+        uint returnAmount;
 
-		destAmount = srcAmount * PRECISION / RATE;
-		(destAmount, returnAmount) = forceMaxDestAmount(destAmount, maxDestAmount, srcAmount);
+        if (src == ETH_TOKEN_ADDRESS) require(msg.value == srcAmount);
+        else {
+            src.transferFrom(msg.sender, address(this), srcAmount);
+        }
 
-		if(dest == ETH_TOKEN_ADDRESS) {
-			destAddress.transfer(destAmount);
-		} else {
-		    require(dest.transfer(destAddress, destAmount));
-		}
-		
-		if (returnAmount > 0) {
-		    if (src == ETH_TOKEN_ADDRESS) {
-		        msg.sender.transfer(returnAmount);
-		    } else {
-		        src.transfer(msg.sender, returnAmount);
-		    }
-		}
+        destAmount = srcAmount * PRECISION / RATE;
+        (destAmount, returnAmount) = forceMaxDestAmount(destAmount, maxDestAmount, srcAmount);
 
-		return destAmount;
+        if(dest == ETH_TOKEN_ADDRESS) {
+            destAddress.transfer(destAmount);
+        } else {
+            require(dest.transfer(destAddress, destAmount));
+        }
 
-		//destAmount = srcAmount * RATE / PRECISION;
-	}
+        if (returnAmount > 0) {
+            if (src == ETH_TOKEN_ADDRESS) {
+                msg.sender.transfer(returnAmount);
+            } else {
+                src.transfer(msg.sender, returnAmount);
+            }
+        }
 
-	function forceMaxDestAmount(uint prevDestAmount, uint maxDestAmount, uint srcAmount)
-	internal
-	returns (uint destAmount, uint returnAmount) {
-		destAmount = prevDestAmount;
-		returnAmount = 0;
+        return destAmount;
 
-    	if(maxDestAmount < destAmount) {
-		    destAmount = maxDestAmount;
-		    uint usedSrcAmount = srcAmount * maxDestAmount / prevDestAmount;
-		    returnAmount = srcAmount - usedSrcAmount;
-		}
-	}
+        //destAmount = srcAmount * RATE / PRECISION;
+    }
+
+    function forceMaxDestAmount(uint prevDestAmount, uint maxDestAmount, uint srcAmount)
+    internal
+    returns (uint destAmount, uint returnAmount) {
+        destAmount = prevDestAmount;
+        returnAmount = 0;
+
+        if(maxDestAmount < destAmount) {
+            destAmount = maxDestAmount;
+            uint usedSrcAmount = srcAmount * maxDestAmount / prevDestAmount;
+            returnAmount = srcAmount - usedSrcAmount;
+        }
+    }
 }
