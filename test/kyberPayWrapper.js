@@ -1,12 +1,5 @@
 const BigNumber = web3.BigNumber
 const Helper = require("./helper.js");
-//const { ZEPPELIN_LOCATION } = require("../helper.js");
-//const { expectThrow } = require(ZEPPELIN_LOCATION + 'openzeppelin-solidity/test/helpers/expectThrow');
-
-require("chai")
-    .use(require("chai-as-promised"))
-    .use(require('chai-bignumber')(BigNumber))
-    .should()
 
 const precision = (new BigNumber(10).pow(18));
 const ethAddress = '0x00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';

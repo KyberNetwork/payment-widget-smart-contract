@@ -1,4 +1,4 @@
-pragma solidity ^0.4.22;
+pragma solidity 0.4.18;
 
 
 import "./ERC20Interface.sol";
@@ -21,7 +21,7 @@ contract Withdrawable is PermissionGroups {
      */
     function withdrawToken(ERC20 token, uint amount, address sendTo) external onlyAdmin {
         require(token.transfer(sendTo, amount));
-        emit TokenWithdraw(token, amount, sendTo);
+        TokenWithdraw(token, amount, sendTo);
     }
 
     event EtherWithdraw(uint amount, address sendTo);
@@ -31,6 +31,6 @@ contract Withdrawable is PermissionGroups {
      */
     function withdrawEther(uint amount, address sendTo) external onlyAdmin {
         sendTo.transfer(amount);
-        emit EtherWithdraw(amount, sendTo);
+        EtherWithdraw(amount, sendTo);
     }
 }

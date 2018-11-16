@@ -1,4 +1,4 @@
-pragma solidity ^0.4.22;
+pragma solidity 0.4.18;
 
 interface ERC20 {
     function totalSupply() external view returns (uint supply);
@@ -30,6 +30,10 @@ contract MockKyberNetwork {
     external
     payable
     returns(uint) {
+
+        minConversionRate;
+        walletId;
+        hint;
 
         uint destAmount;
         uint returnAmount;
@@ -63,6 +67,7 @@ contract MockKyberNetwork {
 
     function forceMaxDestAmount(uint prevDestAmount, uint maxDestAmount, uint srcAmount)
     internal
+    pure
     returns (uint destAmount, uint returnAmount) {
         destAmount = prevDestAmount;
         returnAmount = 0;

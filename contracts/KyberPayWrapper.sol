@@ -1,4 +1,4 @@
-pragma solidity ^0.4.22;
+pragma solidity 0.4.18;
 
 
 import "./ERC20Interface.sol";
@@ -78,7 +78,7 @@ contract KyberPayWrapper is Withdrawable, ReentrancyGuard {
         uint paidAmount = (src == dest) ? doPayWithoutKyber(payData) : doPayWithKyber(payData);
 
         // log as event
-        emit ProofOfPayment(destAddress, dest, paidAmount, paymentData);
+        ProofOfPayment(destAddress, dest, paidAmount, paymentData);
     }
 
     function doPayWithoutKyber(PayData memory payData) internal returns (uint paidAmount) {
@@ -119,7 +119,11 @@ contract KyberPayWrapper is Withdrawable, ReentrancyGuard {
         }
 
 
-        (wrapperSrcBalanceBefore, destAddressBalanceBefore) = getBalances(payData.src, payData.dest, payData.destAddress);
+        (wrapperSrcBalanceBefore, destAddressBalanceBefore) = getBalances(
+            payData.src,
+            payData.dest,
+            payData.destAddress
+        );
 
         paidAmount = doTradeWithHint(payData);
         if (payData.src != ETH_TOKEN_ADDRESS) require(payData.src.approve(payData.kyberNetworkProxy, 0));
@@ -165,9 +169,13 @@ contract KyberPayWrapper is Withdrawable, ReentrancyGuard {
         returns (uint wrapperSrcBalance, uint destAddressBalance)
     {
         if (src == ETH_TOKEN_ADDRESS) wrapperSrcBalance = address(this).balance;
-        else wrapperSrcBalance = src.balanceOf(address(this));
+        else {
+            wrapperSrcBalance = src.balanceOf(address(this));
+        }
 
         if (dest == ETH_TOKEN_ADDRESS) destAddressBalance = destAddress.balance;
-        else destAddressBalance = dest.balanceOf(destAddress);
+        else {
+            destAddressBalance = dest.balanceOf(destAddress);
+        }
     } 
 }
