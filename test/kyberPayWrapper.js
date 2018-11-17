@@ -11,6 +11,7 @@ const rate = 0.25
 const KyberPayWrapper = artifacts.require("./KyberPayWrapper.sol")
 const TestToken = artifacts.require("./mock/TestToken.sol");
 const MockKyberNetwork = artifacts.require("./mock/MockKyberNetwork.sol");
+const MockReentrantKyberNetwork = artifacts.require("./mock/MockReentrantKyberNetwork.sol");
 
 async function getBalances(currency ,senderAddress, recieverAddress) {
     if( currency == ethAddress) {
@@ -484,9 +485,23 @@ contract('KyberPayWrapper', function(accounts) {
     });
 
     describe('no reentrancy', function () {
-        const amount = precision.mul(0.5);;
+        const amount = precision.mul(0.5);
 
-        xit("can not create reentrancy", async function () {});
+        it("can not create reentrancy", async function () {
+            const reentrantKyber = await MockReentrantKyberNetwork.new(kyberNetwork.address);
+
+            const maxDestAmount = amount.times(1/rate);
+
+            /* when returning in doPayWithKyber() right after doTradeWithHint the following revert only when using
+             the nonReentrant modifier. */
+
+            try {
+                await payWrapper.pay(ethAddress, amount, token1.address, reciever, maxDestAmount, 0, 0, paymentData,
+                                          0, reentrantKyber.address, {value: amount})
+            } catch(e){
+                assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+            }
+        });
     });
 });
 

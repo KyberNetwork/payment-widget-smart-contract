@@ -53,7 +53,7 @@ contract KyberPayWrapper is Withdrawable, ReentrancyGuard {
         bytes paymentData,
         bytes hint,
         KyberNetwork kyberNetworkProxy
-    ) public payable
+    ) nonReentrant public payable
     {
 
         require(src != address(0));
