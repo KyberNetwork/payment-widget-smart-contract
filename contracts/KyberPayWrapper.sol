@@ -40,7 +40,7 @@ contract KyberPayWrapper is Withdrawable, ReentrancyGuard {
 
     function () public payable {} /* solhint-disable-line no-empty-blocks */
 
-    event ProofOfPayment(address _payer, address _payee, address _token, uint _amount, bytes _data);
+    event ProofOfPayment(address indexed _payer, address indexed _payee, address _token, uint _amount, bytes _data);
 
     function pay(
         ERC20 src,
