@@ -35,7 +35,7 @@ contract('KyberPayWrapper', function(accounts) {
     const reciever = accounts[1];
     const other = accounts[2];
 
-    beforeEach('create contracts', async function () {
+    beforeEach('create contracts and deposit initial funds', async function () {
         payWrapper = await KyberPayWrapper.new();
 
         token1 = await TestToken.new("token1", "tok1", 18);
@@ -49,6 +49,11 @@ contract('KyberPayWrapper', function(accounts) {
         const kyberNetworkTok2InitAmount = precision.times(100)
         await token2.transfer(kyberNetwork.address, kyberNetworkTok2InitAmount)
 
+        // move some ether to pay wrapper, just to make sure its existent does not affect returning change.
+        const initialWrapperEthAmount = precision.times(0.003237)
+        await Helper.sendEtherWithPromise(admin, payWrapper.address, initialWrapperEthAmount)
+
+        // save balances
         senderEthBefore = await Helper.getBalancePromise(admin);
         senderTok1Before = await token1.balanceOf(admin);
         senderTok2Before = await token2.balanceOf(admin);
@@ -79,7 +84,8 @@ contract('KyberPayWrapper', function(accounts) {
 
             assert.equal(logs.length, 1);
             assert.equal(logs[0].event, 'ProofOfPayment');
-            assert.equal(logs[0].args._beneficiary, reciever);
+            assert.equal(logs[0].args._payer, admin);
+            assert.equal(logs[0].args._payee, reciever);
             assert.equal(logs[0].args._token, ethAddressJS);
             assert.equal(logs[0].args._amount, amount.toString());
             assert.equal(logs[0].args._data, paymentDataHex);
@@ -146,7 +152,8 @@ contract('KyberPayWrapper', function(accounts) {
 
             assert.equal(logs.length, 1);
             assert.equal(logs[0].event, 'ProofOfPayment');
-            assert.equal(logs[0].args._beneficiary, reciever);
+            assert.equal(logs[0].args._payer, admin);
+            assert.equal(logs[0].args._payee, reciever);
             assert.equal(logs[0].args._token, token1.address);
             assert.equal(logs[0].args._amount, amount.toString());
             assert.equal(logs[0].args._data, paymentDataHex);
@@ -214,7 +221,8 @@ contract('KyberPayWrapper', function(accounts) {
 
             assert.equal(logs.length, 1);
             assert.equal(logs[0].event, 'ProofOfPayment');
-            assert.equal(logs[0].args._beneficiary, reciever);
+            assert.equal(logs[0].args._payer, admin);
+            assert.equal(logs[0].args._payee, reciever);
             assert.equal(logs[0].args._token, token1.address);
             assert.equal(logs[0].args._amount, maxDestAmount.toString());
             assert.equal(logs[0].args._data, paymentDataHex);
@@ -291,7 +299,8 @@ contract('KyberPayWrapper', function(accounts) {
 
             assert.equal(logs.length, 1);
             assert.equal(logs[0].event, 'ProofOfPayment');
-            assert.equal(logs[0].args._beneficiary, reciever);
+            assert.equal(logs[0].args._payer, admin);
+            assert.equal(logs[0].args._payee, reciever);
             assert.equal(logs[0].args._token, ethAddressJS);
             assert.equal(logs[0].args._amount, expectedRecierverGain.toString());
             assert.equal(logs[0].args._data, paymentDataHex);
@@ -382,7 +391,8 @@ contract('KyberPayWrapper', function(accounts) {
 
             assert.equal(logs.length, 1);
             assert.equal(logs[0].event, 'ProofOfPayment');
-            assert.equal(logs[0].args._beneficiary, reciever);
+            assert.equal(logs[0].args._payer, admin);
+            assert.equal(logs[0].args._payee, reciever);
             assert.equal(logs[0].args._token, token2.address);
             assert.equal(logs[0].args._amount, expectedRecierverGain.toString());
             assert.equal(logs[0].args._data, paymentDataHex);
@@ -460,7 +470,7 @@ contract('KyberPayWrapper', function(accounts) {
     describe('check withdrawable as non admin', function () {
         const amount = precision.mul(0.5);;
 
-        it("can withdraw ether", async function () {
+        it("can not withdraw ether", async function () {
             // move some eth to pay wrapper
             await Helper.sendEtherWithPromise(admin, payWrapper.address, amount)
 
@@ -472,7 +482,7 @@ contract('KyberPayWrapper', function(accounts) {
 
         });
 
-        it("can withdraw tokens", async function () {
+        it("can not withdraw tokens", async function () {
             // move some tokens to pay wrapper
             await token1.transfer(payWrapper.address, amount)
 

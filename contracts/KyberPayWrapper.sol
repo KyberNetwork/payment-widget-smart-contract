@@ -38,9 +38,9 @@ contract KyberPayWrapper is Withdrawable, ReentrancyGuard {
         KyberNetwork kyberNetworkProxy;
     }
 
-    function () public payable {}
+    function () public payable {} /* solhint-disable-line no-empty-blocks */
 
-    event ProofOfPayment(address _beneficiary, address _token, uint _amount, bytes _data);
+    event ProofOfPayment(address _payer, address _payee, address _token, uint _amount, bytes _data);
 
     function pay(
         ERC20 src,
@@ -53,7 +53,7 @@ contract KyberPayWrapper is Withdrawable, ReentrancyGuard {
         bytes paymentData,
         bytes hint,
         KyberNetwork kyberNetworkProxy
-    ) nonReentrant public payable
+    ) public nonReentrant payable
     {
 
         require(src != address(0));
@@ -62,23 +62,23 @@ contract KyberPayWrapper is Withdrawable, ReentrancyGuard {
 
         if (src == ETH_TOKEN_ADDRESS) require(srcAmount == msg.value);
 
-        PayData memory payData = PayData(
-            src,
-            srcAmount,
-            dest,
-            destAddress,
-            maxDestAmount,
-            minConversionRate,
-            walletId,
-            paymentData,
-            hint,
-            kyberNetworkProxy
-        );
+        PayData memory payData = PayData({
+            src:src,
+            srcAmount:srcAmount,
+            dest:dest,
+            destAddress:destAddress,
+            maxDestAmount:maxDestAmount,
+            minConversionRate:minConversionRate,
+            walletId:walletId,
+            paymentData:paymentData,
+            hint:hint,
+            kyberNetworkProxy:kyberNetworkProxy
+        });
 
         uint paidAmount = (src == dest) ? doPayWithoutKyber(payData) : doPayWithKyber(payData);
 
         // log as event
-        ProofOfPayment(destAddress, dest, paidAmount, paymentData);
+        ProofOfPayment(msg.sender ,destAddress, dest, paidAmount, paymentData);
     }
 
     function doPayWithoutKyber(PayData memory payData) internal returns (uint paidAmount) {
@@ -118,7 +118,6 @@ contract KyberPayWrapper is Withdrawable, ReentrancyGuard {
             require(payData.src.approve(payData.kyberNetworkProxy, payData.srcAmount));
         }
 
-
         (wrapperSrcBalanceBefore, destAddressBalanceBefore) = getBalances(
             payData.src,
             payData.dest,
@@ -143,24 +142,25 @@ contract KyberPayWrapper is Withdrawable, ReentrancyGuard {
 
         // return to sender the returned change
         if (returnAmount > 0) {
-            if (payData.src == ETH_TOKEN_ADDRESS) msg.sender.transfer(returnAmount);
-            else {
+            if (payData.src == ETH_TOKEN_ADDRESS) {
+                msg.sender.transfer(returnAmount);
+            } else {
                 require(payData.src.transfer(msg.sender, returnAmount));
             }
         }
     }
 
     function doTradeWithHint(PayData memory payData) internal returns (uint paidAmount) {
-        paidAmount = payData.kyberNetworkProxy.tradeWithHint.value(msg.value)(
-            payData.src,
-            payData.srcAmount,
-            payData.dest,
-            payData.destAddress,
-            payData.maxDestAmount,
-            payData.minConversionRate,
-            payData.walletId,
-            payData.hint
-        );
+        paidAmount = payData.kyberNetworkProxy.tradeWithHint.value(msg.value)({
+            src:payData.src,
+            srcAmount:payData.srcAmount,
+            dest:payData.dest,
+            destAddress:payData.destAddress,
+            maxDestAmount:payData.maxDestAmount,
+            minConversionRate:payData.minConversionRate,
+            walletId:payData.walletId,
+            hint:payData.hint
+        });
     }
 
     function getBalances (ERC20 src, ERC20 dest, address destAddress)
@@ -168,13 +168,15 @@ contract KyberPayWrapper is Withdrawable, ReentrancyGuard {
         view
         returns (uint wrapperSrcBalance, uint destAddressBalance)
     {
-        if (src == ETH_TOKEN_ADDRESS) wrapperSrcBalance = address(this).balance;
-        else {
+        if (src == ETH_TOKEN_ADDRESS) {
+            wrapperSrcBalance = address(this).balance;
+        } else {
             wrapperSrcBalance = src.balanceOf(address(this));
         }
 
-        if (dest == ETH_TOKEN_ADDRESS) destAddressBalance = destAddress.balance;
-        else {
+        if (dest == ETH_TOKEN_ADDRESS) {
+            destAddressBalance = destAddress.balance;
+        } else {
             destAddressBalance = dest.balanceOf(destAddress);
         }
     } 
